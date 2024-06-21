@@ -1,6 +1,35 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import './App.css';
+import {
+  Box,
+  Heading,
+  Text,
+  Button,
+  Flex,
+  Center,
+  VStack,
+  HStack,
+  Table,
+  Thead,
+  Tbody,
+  Tr,
+  Th,
+  Td,
+  Divider,
+  useDisclosure,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalCloseButton,
+  ModalBody,
+  ModalFooter,
+  Input,
+  FormControl,
+  FormLabel,
+  FormHelperText,
+  useToast
+} from '@chakra-ui/react';
 
 function App() {
   const [playerName, setPlayerName] = useState('User');
@@ -10,6 +39,10 @@ function App() {
   const [randomChoice, setRandomChoice] = useState('');
   const [message, setMessage] = useState("Let's play!");
   const [topPlayers, setTopPlayers] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const { isOpen, onOpen, onClose } = useDisclosure();
+  const toast = useToast();
 
   useEffect(() => {
     fetchTopPlayers();
@@ -17,7 +50,7 @@ function App() {
 
   const fetchTopPlayers = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/players');
+      const response = await axios.get('https://multiplayer-o875.onrender.com/players');
       setTopPlayers(response.data);
     } catch (error) {
       console.error('Error fetching top players:', error);
@@ -63,47 +96,112 @@ function App() {
 
   const gameOver = async () => {
     try {
-      const response = await axios.post('http://localhost:5000/players', {
+      setIsLoading(true);
+      const response = await axios.post('https://multiplayer-o875.onrender.com/players', {
         name: playerName,
         scores: userScores
       });
       console.log('Player added:', response.data);
       fetchTopPlayers();
+      setIsLoading(false);
+      toast({
+        title: 'Game Over',
+        description: 'Scores updated successfully!',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
     } catch (error) {
       console.error('Error adding player:', error);
+      setIsLoading(false);
+      toast({
+        title: 'Error',
+        description: 'Failed to update scores.',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
     }
   };
 
   return (
-    <div className="App">
-      <header className="App-header">
-        <h1>Rock Paper Scissors Game</h1>
-        <p>Welcome, {playerName}!</p>
-        <p>{message}</p>
-        <div className="choices">
-          <button onClick={() => setUserChoiceHandler('ROCK')}>Rock</button>
-          <button onClick={() => setUserChoiceHandler('PAPER')}>Paper</button>
-          <button onClick={() => setUserChoiceHandler('SCISSORS')}>Scissors</button>
-        </div>
-        <div>
-          <p>Your choice: {userChoice}</p>
-          <p>Computer's choice: {randomChoice}</p>
-        </div>
-        <div>
-          <p>Your scores: {userScores}</p>
-          <p>Computer's scores: {compScores}</p>
-        </div>
-        <button onClick={saveName}>Change Name</button>
-      </header>
-      <div className="top-players">
-        <h2>Top Players</h2>
-        <ul>
-          {topPlayers.map((player, index) => (
-            <li key={index}>{player.name}: Scores: {player.scores}</li>
-          ))}
-        </ul>
-      </div>
-    </div>
+    <Box bg="#FFC0CB" minHeight="100vh" p={4}>
+      <Center>
+        <Box maxW="xl" p={8} borderRadius="xl" boxShadow="lg">
+          <VStack spacing={4} align="center">
+            <Heading size="xl">Rock Paper Scissors Game</Heading>
+            <Text>Welcome, {playerName}!</Text>
+            <Text>{message}</Text>
+            <HStack spacing={4} mb={4}>
+              <Button size="lg" colorScheme="blue" onClick={() => setUserChoiceHandler('ROCK')}>Rock</Button>
+              <Button size="lg" colorScheme="green" onClick={() => setUserChoiceHandler('PAPER')}>Paper</Button>
+              <Button size="lg" colorScheme="red" onClick={() => setUserChoiceHandler('SCISSORS')}>Scissors</Button>
+            </HStack>
+            <VStack spacing={4} align="center" mb={4}>
+              <Text fontSize="lg">Your choice: {userChoice}</Text>
+              <Text fontSize="lg">Computer's choice: {randomChoice}</Text>
+            </VStack>
+            <HStack spacing={8} mb={4}>
+              <VStack>
+                <Text fontSize="lg">Your scores:</Text>
+                <Text fontSize="2xl">{userScores}</Text>
+              </VStack>
+              <VStack>
+                <Text fontSize="lg">Computer's scores:</Text>
+                <Text fontSize="2xl">{compScores}</Text>
+              </VStack>
+            </HStack>
+            <Button size="md" onClick={saveName}>Change Name</Button>
+          </VStack>
+          <Divider my={8} />
+          <VStack align="start" w="100%">
+            <Heading size="lg">Top Players</Heading>
+            <Table variant="striped" colorScheme="pink" size="md" borderWidth="1px" borderRadius="md">
+              <Thead>
+                <Tr>
+                  <Th>Name</Th>
+                  <Th isNumeric>Scores</Th>
+                </Tr>
+              </Thead>
+              <Tbody>
+                {topPlayers.map((player, index) => (
+                  <Tr key={index}>
+                    <Td>{player.name}</Td>
+                    <Td isNumeric>{player.scores}</Td>
+                  </Tr>
+                ))}
+              </Tbody>
+            </Table>
+          </VStack>
+        </Box>
+      </Center>
+      <Modal isOpen={isOpen} onClose={onClose}>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Enter Your Name</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <FormControl>
+              <FormLabel>Your Name</FormLabel>
+              <Input
+                type="text"
+                value={playerName}
+                onChange={(e) => setPlayerName(e.target.value)}
+              />
+              <FormHelperText>Enter your name to start the game.</FormHelperText>
+            </FormControl>
+          </ModalBody>
+          <ModalFooter>
+            <Button colorScheme="blue" mr={3} onClick={onClose}>
+              Close
+            </Button>
+            <Button colorScheme="green" onClick={saveName}>
+              Save
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+    </Box>
   );
 }
 
